@@ -93,52 +93,51 @@ void send_bytes_26_to_34(void) {
     raw_hid_send(data, sizeof(data));
 }
 
-//static int8_t scroll_speed = 0;
-	static deferred_token token_up = INVALID_DEFERRED_TOKEN;  // For SCROLLUP.
-	static deferred_token token_down = INVALID_DEFERRED_TOKEN;  // For SCROLLDOWN.
-	
-bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+static deferred_token token = INVALID_DEFERRED_TOKEN;  // For SCROLLUP.
 
+void pre_process_record_user(uint16_t keycode, keyrecord_t *record) {
+    if (record->event.pressed) { // If any key is pressed, check if scrolling is active and stop.
+        if (token) {
+            cancel_deferred_exec(token);
+            token = INVALID_DEFERRED_TOKEN;
+        }
+    }
+}
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         case SCROLLUP: { // Mouse wheel up with constant repeating.
-            static const uint8_t REP_DELAY_MS_UP = 250; // Constant delay for SCROLLUP.
-
             if (record->event.pressed) { // Mouse wheel up action started or stopped.
-                if (token_up) { // If already repeating, stop.
-                    cancel_deferred_exec(token_up);
-                    token_up = INVALID_DEFERRED_TOKEN;
+                if (token) { // If already repeating, stop.
+                    cancel_deferred_exec(token);
+                    token = INVALID_DEFERRED_TOKEN;
                 } else { // If not repeating, start.
                     tap_code(KC_MS_WH_UP); // Initial action of mouse wheel up.
-
                     uint32_t wh_up_callback(uint32_t trigger_time, void* cb_arg) {
                         tap_code(KC_MS_WH_UP);
-                        return REP_DELAY_MS_UP; // Return constant delay for SCROLLUP.
+                        return REP_DELAY_MS; // Return constant delay for SCROLLUP.
                     }
-
-                    token_up = defer_exec(REP_DELAY_MS_UP, wh_up_callback, NULL); 
+                    token = defer_exec(REP_DELAY_MS, wh_up_callback, NULL); 
                 }
             }
         } return false; // Skip normal handling.
 
         case SCROLLDOWN: { // Mouse wheel down with constant repeating.
-            static const uint8_t REP_DELAY_MS_DOWN = 250; // Constant delay for SCROLLDOWN.
-
             if (record->event.pressed) { // Mouse wheel down action started or stopped.
-                if (token_down) { // If already repeating, stop.
-                    cancel_deferred_exec(token_down);
-                    token_down = INVALID_DEFERRED_TOKEN;
+                if (token) { // If already repeating, stop.
+                    cancel_deferred_exec(token);
+                    token = INVALID_DEFERRED_TOKEN;
                 } else { // If not repeating, start.
                     tap_code(KC_MS_WH_DOWN); // Initial action of mouse wheel down.
-
                     uint32_t wh_down_callback(uint32_t trigger_time, void* cb_arg) {
                         tap_code(KC_MS_WH_DOWN);
-                        return REP_DELAY_MS_DOWN; // Return constant delay for SCROLLDOWN.
+                        return REP_DELAY_MS; // Return constant delay for SCROLLDOWN.
                     }
-
-                    token_down = defer_exec(REP_DELAY_MS_DOWN, wh_down_callback, NULL); 
+                    token = defer_exec(REP_DELAY_MS, wh_down_callback, NULL); 
                 }
             }
         } return false; // Skip normal handling.
+	    
         case COPYACC:  // Copies the accession number to the clipboard
             if (record->event.pressed) {
                 SEND_STRING(
@@ -378,18 +377,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     return true; // Process all other keycodes normally.
 }
 
-void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
-    if (record->event.pressed) { // If any key is pressed, check if scrolling is active and stop.
-        if (token_up) {
-            cancel_deferred_exec(token_up);
-            token_up = INVALID_DEFERRED_TOKEN;
-        }
-        if (token_down) {
-            cancel_deferred_exec(token_down);
-            token_down = INVALID_DEFERRED_TOKEN;
-        }
-    }
-}
 
 
 /*  		case SCROLLDOWN:  // Toggles scroll wheel down. 
