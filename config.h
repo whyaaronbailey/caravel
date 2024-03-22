@@ -1,0 +1,2 @@
+#define RAW_USAGE_PAGE 0x0001
+#define RAW_USAGE 0x0000
