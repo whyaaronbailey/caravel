@@ -34,6 +34,11 @@ enum custom_keycodes {
 	PREVFIELD,
 };
 
+enum {
+	TD_PAN_CINE = 0,
+};
+	
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [0] = LAYOUT(
         WL_SOFTTISSUE,  
@@ -43,13 +48,13 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         ZOOM, 
         WL_BONE,  
         WL_BRAIN, 
-        SCROLLUP,  
+        SCROLLUP,
         OPENEPIC,  
         ARROW, 
-        SPINE_L, 
+        TD(TD_PAN_CINE),
         KC_MS_WH_UP,  
         KC_MS_WH_DOWN, 
-        SCROLLDOWN, 
+        SCROLLDOWN,
         MEASURE, 
         COPYACC,  
         OPENGE,  
@@ -88,56 +93,63 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 		_______
     )
 };
-void send_bytes_26_to_34(void) {
-    uint8_t data[9] = {0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    raw_hid_send(data, sizeof(data));
-}
 
-static deferred_token token = INVALID_DEFERRED_TOKEN;  // For SCROLLUP.
+//Tap Dance FOR GE PAN / CINE
+tap_dance_action_t tap_dance_actions[] = {
+  [TD_PAN_CINE]  = ACTION_TAP_DANCE_DOUBLE(KC_P, KC_U)  // tap once for P, twice for U
+};
 
-void pre_process_record_user(uint16_t keycode, keyrecord_t *record) {
-    if (record->event.pressed) { // If any key is pressed, check if scrolling is active and stop.
-        if (token) {
-            cancel_deferred_exec(token);
-            token = INVALID_DEFERRED_TOKEN;
-        }
-    }
-}
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+	
+	static deferred_token token_up = INVALID_DEFERRED_TOKEN;  // For SCROLLUP.
+	static deferred_token token_down = INVALID_DEFERRED_TOKEN;  // For SCROLLDOWN.
+	
     switch (keycode) {
-        case SCROLLUP: { // Mouse wheel up with constant repeating.
+		
+        case SCROLLUP:  // Mouse wheel up with constant repeating.
+            static const uint16_t REP_DELAY_MS_UP = 275; // Constant delay for SCROLLUP.
+
             if (record->event.pressed) { // Mouse wheel up action started or stopped.
-                if (token) { // If already repeating, stop.
-                    cancel_deferred_exec(token);
-                    token = INVALID_DEFERRED_TOKEN;
+                if (token_up) { // If already repeating, stop.
+                    cancel_deferred_exec(token_up);
+                    token_up = INVALID_DEFERRED_TOKEN;
                 } else { // If not repeating, start.
                     tap_code(KC_MS_WH_UP); // Initial action of mouse wheel up.
+
                     uint32_t wh_up_callback(uint32_t trigger_time, void* cb_arg) {
                         tap_code(KC_MS_WH_UP);
-                        return REP_DELAY_MS; // Return constant delay for SCROLLUP.
+                        return REP_DELAY_MS_UP; // Return constant delay for SCROLLUP.
                     }
-                    token = defer_exec(REP_DELAY_MS, wh_up_callback, NULL); 
+
+                    token_up = defer_exec(REP_DELAY_MS_UP, wh_up_callback, NULL); 
                 }
             }
-        } return false; // Skip normal handling.
+			return false;
+        
 
-        case SCROLLDOWN: { // Mouse wheel down with constant repeating.
+        case SCROLLDOWN: // Mouse wheel down with constant repeating.
+            static const uint16_t REP_DELAY_MS_DOWN = 275; // Constant delay for SCROLLDOWN.
+
             if (record->event.pressed) { // Mouse wheel down action started or stopped.
-                if (token) { // If already repeating, stop.
-                    cancel_deferred_exec(token);
-                    token = INVALID_DEFERRED_TOKEN;
+                if (token_down) { // If already repeating, stop.
+                    cancel_deferred_exec(token_down);
+                    token_down = INVALID_DEFERRED_TOKEN;
                 } else { // If not repeating, start.
                     tap_code(KC_MS_WH_DOWN); // Initial action of mouse wheel down.
+
                     uint32_t wh_down_callback(uint32_t trigger_time, void* cb_arg) {
                         tap_code(KC_MS_WH_DOWN);
-                        return REP_DELAY_MS; // Return constant delay for SCROLLDOWN.
+                        return REP_DELAY_MS_DOWN; // Return constant delay for SCROLLDOWN.
                     }
-                    token = defer_exec(REP_DELAY_MS, wh_down_callback, NULL); 
+
+                    token_down = defer_exec(REP_DELAY_MS_DOWN, wh_down_callback, NULL); 
                 }
             }
-        } return false; // Skip normal handling.
-	    
+			return false;
+
+
+					
         case COPYACC:  // Copies the accession number to the clipboard
             if (record->event.pressed) {
                 SEND_STRING(
@@ -370,87 +382,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 				SEND_STRING(SS_TAP(X_F14));
 			}
 		return false;
-				  
-
     }
-
     return true; // Process all other keycodes normally.
 }
-
-
-
-/*  		case SCROLLDOWN:  // Toggles scroll wheel down. 
-		  if (record->event.pressed) {  
-			static bool held = false;  // Static variable to remember state.
-			held = !held;  // Toggle between holding and releasing.
-			if (held) {  // scroll down
-			  register_code16(KC_MS_WH_DOWN);
-			  wait_ms(100);
-			} else {  // stop scrolling.
-			  unregister_code16(KC_MS_WH_DOWN);
-			}
-		  }
-		  return false;
-
-		case SCROLLUP:  // Toggles scroll UP. 
-		  if (record->event.pressed) {  
-			static bool held = false;  // Static variable to remember state.
-			held = !held;  // Toggle between holding and releasing.
-			if (held) {  // scroll down
-			  register_code16(KC_MS_WH_UP);
-			} else {  // stop scrolling.
-			  unregister_code16(KC_MS_WH_UP);
-			}
-		  }
-		  return false;  */
-		  
- /*    case SCROLLDOWN:
-      if (record->event.pressed) {
-        if (!held_down) {
-          if (scroll_speed < 3) {
-            scroll_speed++;
-          }
-          if (scroll_speed > 0) {
-            for (int i = 0; i < scroll_speed; i++) {
-              register_code16(KC_MS_WH_DOWN);
-              unregister_code16(KC_MS_WH_DOWN);
-              wait_ms(100 / scroll_speed);  // Add delay here.
-            }
-          } else {
-            unregister_code16(KC_MS_WH_DOWN);
-            unregister_code16(KC_MS_WH_UP);
-          }
-          held_down = true;
-        } else {
-          unregister_code16(KC_MS_WH_DOWN);
-          unregister_code16(KC_MS_WH_UP);
-          held_down = false;
-        }
-      }
-      return false;
-
-    case SCROLLUP:
-      if (record->event.pressed) {
-        if (!held_up) {
-          if (scroll_speed > -3) {
-            scroll_speed--;
-          }
-          if (scroll_speed < 0) {
-            for (int i = 0; i < -scroll_speed; i++) {
-              register_code16(KC_MS_WH_UP);
-              unregister_code16(KC_MS_WH_UP);
-              wait_ms(100 / -scroll_speed);  // Add delay here.
-            }
-          } else {
-            unregister_code16(KC_MS_WH_DOWN);
-            unregister_code16(KC_MS_WH_UP);
-          }
-          held_up = true;
-        } else {
-          unregister_code16(KC_MS_WH_DOWN);
-          unregister_code16(KC_MS_WH_UP);
-          held_up = false;
-        }
-      }
-      return false; 
-*/
