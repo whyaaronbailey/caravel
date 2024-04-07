@@ -6,11 +6,11 @@
 #include "print.h"
 
 enum custom_keycodes {
-    COPYACC = SAFE_RANGE,
-    OPENGE,
-    OPENEPIC,
-    PASTE,
-    DICTATE,
+	COPYACC = SAFE_RANGE,
+	OPENGE,
+	OPENEPIC,
+	PASTE,
+	DICTATE,
 	WL_SOFTTISSUE,
 	WL_BONE,
 	WL_BRAIN,
@@ -41,7 +41,7 @@ enum {
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [0] = LAYOUT(
-        WL_SOFTTISSUE,  
+		WL_SOFTTISSUE,  
         WL_STROKE, 
         WL_LUNG,
         ANNOTATIONS,  
@@ -99,56 +99,47 @@ tap_dance_action_t tap_dance_actions[] = {
   [TD_PAN_CINE]  = ACTION_TAP_DANCE_DOUBLE(KC_P, KC_U)  // tap once for P, twice for U
 };
 
+static const uint16_t REP_DELAY_MS = 275; // Common delay for both scroll up and down
+
+uint32_t wh_callback(uint32_t trigger_time, void* cb_arg) {
+    bool is_up = (bool)cb_arg;
+    if (is_up) {
+        tap_code(KC_MS_WH_UP);
+    } else {
+        tap_code(KC_MS_WH_DOWN);
+    }
+    return REP_DELAY_MS;
+}
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-	
-	static deferred_token token_up = INVALID_DEFERRED_TOKEN;  // For SCROLLUP.
-	static deferred_token token_down = INVALID_DEFERRED_TOKEN;  // For SCROLLDOWN.
-	
+
+    static deferred_token token = INVALID_DEFERRED_TOKEN;
+
     switch (keycode) {
 		
-        case SCROLLUP:  // Mouse wheel up with constant repeating.
-            static const uint16_t REP_DELAY_MS_UP = 275; // Constant delay for SCROLLUP.
-
-            if (record->event.pressed) { // Mouse wheel up action started or stopped.
-                if (token_up) { // If already repeating, stop.
-                    cancel_deferred_exec(token_up);
-                    token_up = INVALID_DEFERRED_TOKEN;
-                } else { // If not repeating, start.
-                    tap_code(KC_MS_WH_UP); // Initial action of mouse wheel up.
-
-                    uint32_t wh_up_callback(uint32_t trigger_time, void* cb_arg) {
-                        tap_code(KC_MS_WH_UP);
-                        return REP_DELAY_MS_UP; // Return constant delay for SCROLLUP.
-                    }
-
-                    token_up = defer_exec(REP_DELAY_MS_UP, wh_up_callback, NULL); 
+        case SCROLLUP:
+            if (record->event.pressed) {
+                if (token) {
+                    cancel_deferred_exec(token);
+                    token = INVALID_DEFERRED_TOKEN;
+                } else {
+                    tap_code(KC_MS_WH_UP);
+                    token = defer_exec(REP_DELAY_MS, wh_callback, (void*)true);
                 }
             }
-			return false;
-        
+            return false;
 
-        case SCROLLDOWN: // Mouse wheel down with constant repeating.
-            static const uint16_t REP_DELAY_MS_DOWN = 275; // Constant delay for SCROLLDOWN.
-
-            if (record->event.pressed) { // Mouse wheel down action started or stopped.
-                if (token_down) { // If already repeating, stop.
-                    cancel_deferred_exec(token_down);
-                    token_down = INVALID_DEFERRED_TOKEN;
-                } else { // If not repeating, start.
-                    tap_code(KC_MS_WH_DOWN); // Initial action of mouse wheel down.
-
-                    uint32_t wh_down_callback(uint32_t trigger_time, void* cb_arg) {
-                        tap_code(KC_MS_WH_DOWN);
-                        return REP_DELAY_MS_DOWN; // Return constant delay for SCROLLDOWN.
-                    }
-
-                    token_down = defer_exec(REP_DELAY_MS_DOWN, wh_down_callback, NULL); 
+        case SCROLLDOWN:
+            if (record->event.pressed) {
+                if (token) {
+                    cancel_deferred_exec(token);
+                    token = INVALID_DEFERRED_TOKEN;
+                } else {
+                    tap_code(KC_MS_WH_DOWN);
+                    token = defer_exec(REP_DELAY_MS, wh_callback, (void*)false);
                 }
             }
-			return false;
-
-
+            return false;
 					
         case COPYACC:  // Copies the accession number to the clipboard
             if (record->event.pressed) {
@@ -165,7 +156,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 );
             }
             return false;
-        
+
         case OPENGE: // Pastes the accession number in GE PACs
             if (record->event.pressed) {
                 SEND_STRING(
@@ -192,7 +183,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 );
             }
             return false;
-        
+
         case PASTE: // Pastes the accession number in EPIC
             if (record->event.pressed) {
                 SEND_STRING(
