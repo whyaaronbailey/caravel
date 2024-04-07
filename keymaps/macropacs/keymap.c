@@ -99,6 +99,8 @@ tap_dance_action_t tap_dance_actions[] = {
   [TD_PAN_CINE]  = ACTION_TAP_DANCE_DOUBLE(KC_P, KC_U)  // tap once for P, twice for U
 };
 
+static const uint16_t REP_DELAY_MS = 275; // Common delay for both scroll up and down
+
 uint32_t wh_callback(uint32_t trigger_time, void* cb_arg) {
     bool is_up = (bool)cb_arg;
     if (is_up) {
@@ -109,12 +111,10 @@ uint32_t wh_callback(uint32_t trigger_time, void* cb_arg) {
     return REP_DELAY_MS;
 }
 
-                    
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-	
+
     static deferred_token token = INVALID_DEFERRED_TOKEN;
-    static const uint16_t REP_DELAY_MS = 275; // Common delay for both scroll up and down
-	
+
     switch (keycode) {
 		
         case SCROLLUP:
